@@ -1,0 +1,13 @@
+great-expectations
+mlflow
+fastapi
+streamlit
+xgboost
+lightgbm
+scikit-learn
+pandas
+numpy
+matplotlib
+evidently
+optuna
+pytest

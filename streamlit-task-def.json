@@ -1,0 +1,92 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:ap-south-2:240352458449:task-definition/housing-streamlit-task:2",
+    "containerDefinitions": [
+        {
+            "name": "housing-streamlit",
+            "image": "240352458449.dkr.ecr.ap-south-2.amazonaws.com/housing-streamlit:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "housing-streamlit-port",
+                    "containerPort": 8501,
+                    "hostPort": 8501,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "API_URL",
+                    "value": "http://housing-api:8000"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/housing-streamlit-task",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "ap-south-2",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "housing-streamlit-task",
+    "executionRoleArn": "arn:aws:iam::240352458449:role/service-role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "revision": 2,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "FARGATE",
+        "MANAGED_INSTANCES"
+    ],
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "256",
+    "memory": "512",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "registeredAt": "2026-03-16T08:28:15.970Z",
+    "registeredBy": "arn:aws:iam::240352458449:root",
+    "enableFaultInjection": false,
+    "tags": []
+}
