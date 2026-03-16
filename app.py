@@ -154,6 +154,9 @@ if st.button("Show Predictions 🚀"):
             # Highlight selected month
             monthly_avg["highlight"] = monthly_avg["month"].apply(lambda m: "Selected" if m == month else "Other")
 
+            # 1. Aggregate to Monthly Averages (Reduces data size for speed!)
+            monthly_avg = yearly_data.groupby("month")[["actual_price", "prediction"]].mean().reset_index()
+   
             fig = px.line(
                 monthly_avg,
                 x="month",
