@@ -129,7 +129,7 @@ if st.button("Show Predictions 🚀"):
             if region == "All":
                 yearly_data = disp_df[disp_df["year"] == year].copy()
                 idx_all = yearly_data.index
-                payload_all = fe_df.loc[idx_all].to_dict(orient="records")
+                payload_all = fe_df.loc[idx_all].fillna(0).to_dict(orient="records")
 
                 resp_all = requests.post(API_URL, json=payload_all, timeout=60)
                 resp_all.raise_for_status()
@@ -140,7 +140,7 @@ if st.button("Show Predictions 🚀"):
             else:
                 yearly_data = disp_df[(disp_df["year"] == year) & (disp_df["region"] == region)].copy()
                 idx_region = yearly_data.index
-                payload_region = fe_df.loc[idx_region].to_dict(orient="records")
+                payload_region = fe_df.loc[idx_region].fillna(0).to_dict(orient="records")
 
                 resp_region = requests.post(API_URL, json=payload_region, timeout=60)
                 resp_region.raise_for_status()
