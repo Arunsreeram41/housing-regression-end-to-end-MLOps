@@ -4,6 +4,7 @@ import requests
 import plotly.express as px
 import boto3, os
 from pathlib import Path
+import gc
 
 # ============================
 # Config
@@ -182,6 +183,9 @@ if st.button("Show Predictions 🚀"):
         except Exception as e:
             st.error(f"API call failed: {e}")
             st.exception(e)
+        finally:
+            # Clear memory after the prediction and plot are done
+            gc.collect()
 
 else:
     st.info("Choose filters and click **Show Predictions** to compute.")

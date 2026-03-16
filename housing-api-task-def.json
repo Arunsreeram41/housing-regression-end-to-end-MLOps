@@ -1,9 +1,9 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:ap-south-2:240352458449:task-definition/housing-api-task:5",
+    "taskDefinitionArn": "arn:aws:ecs:ap-south-2:240352458449:task-definition/housing-api-task:9",
     "containerDefinitions": [
         {
             "name": "housing-api",
-            "image": "240352458449.dkr.ecr.ap-south-2.amazonaws.com/housing-api:db05cf584b170c7c32f4bcd4646fa9db34bacdbb",
+            "image": "240352458449.dkr.ecr.ap-south-2.amazonaws.com/housing-api:b71ba3fe08f7e306ccd465e034cfb6dd972841f5",
             "cpu": 0,
             "portMappings": [
                 {
@@ -46,7 +46,7 @@
     "taskRoleArn": "arn:aws:iam::240352458449:role/housing-mlops-task-role",
     "executionRoleArn": "arn:aws:iam::240352458449:role/service-role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
-    "revision": 5,
+    "revision": 9,
     "volumes": [],
     "status": "ACTIVE",
     "requiresAttributes": [
@@ -87,13 +87,13 @@
     "requiresCompatibilities": [
         "FARGATE"
     ],
-    "cpu": "256",
-    "memory": "512",
+    "cpu": "1024",
+    "memory": "2048",
     "runtimePlatform": {
         "cpuArchitecture": "X86_64",
         "operatingSystemFamily": "LINUX"
     },
-    "registeredAt": "2026-03-16T16:17:33.640Z",
+    "registeredAt": "2026-03-16T17:48:52.600Z",
     "registeredBy": "arn:aws:iam::240352458449:user/arun",
     "enableFaultInjection": false,
     "tags": []
