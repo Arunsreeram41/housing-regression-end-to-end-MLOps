@@ -4,7 +4,6 @@ import requests
 import plotly.express as px
 import boto3, os
 from pathlib import Path
-import gc
 
 # ============================
 # Config
@@ -89,10 +88,13 @@ if st.button("Show Predictions 🚀"):
         st.write(f"📅 Running predictions for **{year}-{month:02d}** | Region: **{region}**")
 
         payload_df = fe_df.loc[idx].fillna(0)
+        if len(payload_df) > 5000:
+            st.warning("⚠️ Data is very large. Showing predictions for the first 5,000 records to prevent timeout.")
+            payload_df = payload_df.head(5000)
         payload = payload_df.to_dict(orient="records")
 
         try:
-            resp = requests.post(API_URL, json=payload, timeout=60)
+            resp = requests.post(API_URL, json=payload, timeout=180)
             resp.raise_for_status()
             out = resp.json()
             preds = out.get("predictions", [])
@@ -130,9 +132,13 @@ if st.button("Show Predictions 🚀"):
             if region == "All":
                 yearly_data = disp_df[disp_df["year"] == year].copy()
                 idx_all = yearly_data.index
-                payload_all = fe_df.loc[idx_all].fillna(0).to_dict(orient="records")
+                payload_all = fe_df.loc[idx_all].fillna(0)
+                if len(payload_all) > 5000:
+                    st.warning("⚠️ Data is very large. Showing predictions for the first 5,000 records to prevent timeout.")
+                    payload_all = payload_all.head(5000)
+                payload_all = payload_all.to_dict(orient="records")
 
-                resp_all = requests.post(API_URL, json=payload_all, timeout=60)
+                resp_all = requests.post(API_URL, json=payload_all, timeout=180)
                 resp_all.raise_for_status()
                 preds_all = resp_all.json().get("predictions", [])
 
@@ -141,9 +147,13 @@ if st.button("Show Predictions 🚀"):
             else:
                 yearly_data = disp_df[(disp_df["year"] == year) & (disp_df["region"] == region)].copy()
                 idx_region = yearly_data.index
-                payload_region = fe_df.loc[idx_region].fillna(0).to_dict(orient="records")
+                payload_region = fe_df.loc[idx_region].fillna(0)
+                if len(payload_region) > 5000:
+                    st.warning("⚠️ Data is very large. Showing predictions for the first 5,000 records to prevent timeout.")
+                    payload_region = payload_region.head(5000)
+                payload_region = payload_region.to_dict(orient="records")
 
-                resp_region = requests.post(API_URL, json=payload_region, timeout=60)
+                resp_region = requests.post(API_URL, json=payload_region, timeout=180)
                 resp_region.raise_for_status()
                 preds_region = resp_region.json().get("predictions", [])
 
@@ -183,9 +193,5 @@ if st.button("Show Predictions 🚀"):
         except Exception as e:
             st.error(f"API call failed: {e}")
             st.exception(e)
-        finally:
-            # Clear memory after the prediction and plot are done
-            gc.collect()
-
 else:
     st.info("Choose filters and click **Show Predictions** to compute.")
