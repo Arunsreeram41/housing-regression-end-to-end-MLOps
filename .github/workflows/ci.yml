@@ -1,6 +1,7 @@
 env:
   CLUSTER_NAME: housing-api-cluster-ecs
   AWS_REGION: ap-south-2
+  TASK_ROLE_ARN: arn:aws:iam::240352458449:role/housing-mlops-task-role
 
 name: CI/CD Pipeline
 
@@ -20,82 +21,80 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      # Build and push housing-api image
+      # Build and push housing-api
       - name: Build, Tag, and Push housing-api
+        id: build-api
         run: |
           IMAGE_TAG=${GITHUB_SHA}
           ECR_REGISTRY=240352458449.dkr.ecr.ap-south-2.amazonaws.com
           ECR_REPOSITORY=housing-api
-
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+          docker build -t $IMAGE -f Dockerfile .
+          docker push $IMAGE
+          docker tag $IMAGE $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
-      # Build and push housing-streamlit image
+      # Build and push housing-streamlit
       - name: Build, Tag, and Push housing-streamlit
+        id: build-streamlit
         run: |
           IMAGE_TAG=${GITHUB_SHA}
           ECR_REGISTRY=240352458449.dkr.ecr.ap-south-2.amazonaws.com
           ECR_REPOSITORY=housing-streamlit
-
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile.streamlit .
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-
-          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          
+          docker build -t $IMAGE -f Dockerfile.streamlit .
+          docker push $IMAGE
+          docker tag $IMAGE $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
 
-      # Deploy to ECS - API
-      - name: Deploy housing-api-task-service-hk820xh3
+      # Update Task Definition for API and Deploy
+      - name: Deploy housing-api
         run: |
-          aws ecs update-service \
-            --cluster housing-api-cluster-ecs \
-            --service housing-api-task-service-hk820xh3 \
-            --force-new-deployment
+          # Download current task definition
+          aws ecs describe-task-definition --task-definition housing-api-task --query taskDefinition > task-def.json
+          
+          # Clean and Update Task Definition (assign Role and Image)
+          NEW_TASK_DEF=$(jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .taskRoleArn="'${{ env.TASK_ROLE_ARN }}'" | .containerDefinitions[0].image="'${{ steps.build-api.outputs.image }}'"' task-def.json)
+          echo "$NEW_TASK_DEF" > new-task-def.json
+          
+          # Register and Update
+          aws ecs register-task-definition --cli-input-json file://new-task-def.json
+          aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service housing-api-task-service-hk820xh3 --task-definition housing-api-task --force-new-deployment
 
-      # Deploy to ECS - Streamlit
-      - name: Deploy housing-streamlit-service
+      # Update Task Definition for Streamlit and Deploy
+      - name: Deploy housing-streamlit
         run: |
-          aws ecs update-service \
-            --cluster housing-api-cluster-ecs \
-            --service housing-streamlit-service \
-            --force-new-deployment
+          aws ecs describe-task-definition --task-definition housing-streamlit-task --query taskDefinition > st-task-def.json
+          
+          # Clean and Update (assign Role, Image, and API_URL Env Var)
+          # Note: We use Service Connect name 'housing-api' for internal talk
+          NEW_ST_TASK_DEF=$(jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | 
+            .taskRoleArn="'${{ env.TASK_ROLE_ARN }}'" | 
+            .containerDefinitions[0].image="'${{ steps.build-streamlit.outputs.image }}'" |
+            (.containerDefinitions[0].environment[] | select(.name=="API_URL")).value="http://housing-api:8000/predict"' st-task-def.json)
+          echo "$NEW_ST_TASK_DEF" > new-st-task-def.json
+          
+          aws ecs register-task-definition --cli-input-json file://new-st-task-def.json
+          aws ecs update-service --cluster ${{ env.CLUSTER_NAME }} --service housing-streamlit-service --task-definition housing-streamlit-task --force-new-deployment
 
       - name: Get Streamlit Public IP and Print URL
         run: |
-          # Wait a few seconds for the network interface to attach
-          sleep 15
-          
-          # 1. Get the Task ARN for the Streamlit service
-          TASK_ARN=$(aws ecs list-tasks \
-            --cluster ${{ env.CLUSTER_NAME }} \
-            --service-name housing-streamlit-service \
-            --query 'taskArns[0]' \
-            --output text \
-            --region ${{ env.AWS_REGION }})
-          
-          # 2. Get the Network Interface ID (ENI)
-          ENI_ID=$(aws ecs describe-tasks \
-            --cluster ${{ env.CLUSTER_NAME }} \
-            --tasks $TASK_ARN \
-            --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' \
-            --output text \
-            --region ${{ env.AWS_REGION }})
-          
-          # 3. Get the Public IP from the ENI
-          PUBLIC_IP=$(aws ec2 describe-network-interfaces \
-            --network-interface-ids $ENI_ID \
-            --query 'NetworkInterfaces[0].Association.PublicIp' \
-            --output text \
-            --region ${{ env.AWS_REGION }})
+          echo "Waiting for service to stabilize..."
+          sleep 45
+          TASK_ARN=$(aws ecs list-tasks --cluster ${{ env.CLUSTER_NAME }} --service-name housing-streamlit-service --query 'taskArns[0]' --output text)
+          ENI_ID=$(aws ecs describe-tasks --cluster ${{ env.CLUSTER_NAME }} --tasks $TASK_ARN --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
+          PUBLIC_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI_ID --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
           
           echo "===================================================="
           echo "🚀 DEPLOYMENT SUCCESSFUL!"
-          echo "🔗 DASHBOARD URL: http://$PUBLIC_IP:8501"
+          echo "🔗 DASHBOARD URL: http://$PUBLIC_IP:8501/dashboard"
           echo "===================================================="
