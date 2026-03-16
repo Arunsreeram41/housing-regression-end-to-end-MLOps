@@ -1,9 +1,9 @@
 {
-    "taskDefinitionArn": "arn:aws:ecs:ap-south-2:240352458449:task-definition/housing-streamlit-task:2",
+    "taskDefinitionArn": "arn:aws:ecs:ap-south-2:240352458449:task-definition/housing-streamlit-task:4",
     "containerDefinitions": [
         {
             "name": "housing-streamlit",
-            "image": "240352458449.dkr.ecr.ap-south-2.amazonaws.com/housing-streamlit:latest",
+            "image": "240352458449.dkr.ecr.ap-south-2.amazonaws.com/housing-streamlit:db05cf584b170c7c32f4bcd4646fa9db34bacdbb",
             "cpu": 0,
             "portMappings": [
                 {
@@ -18,7 +18,7 @@
             "environment": [
                 {
                     "name": "API_URL",
-                    "value": "http://housing-api:8000"
+                    "value": "http://housing-api:8000/predict"
                 }
             ],
             "environmentFiles": [],
@@ -39,9 +39,10 @@
         }
     ],
     "family": "housing-streamlit-task",
+    "taskRoleArn": "arn:aws:iam::240352458449:role/housing-mlops-task-role",
     "executionRoleArn": "arn:aws:iam::240352458449:role/service-role/ecsTaskExecutionRole",
     "networkMode": "awsvpc",
-    "revision": 2,
+    "revision": 4,
     "volumes": [],
     "status": "ACTIVE",
     "requiresAttributes": [
@@ -56,6 +57,9 @@
         },
         {
             "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
         },
         {
             "name": "ecs.capability.execution-role-ecr-pull"
@@ -85,8 +89,8 @@
         "cpuArchitecture": "X86_64",
         "operatingSystemFamily": "LINUX"
     },
-    "registeredAt": "2026-03-16T08:28:15.970Z",
-    "registeredBy": "arn:aws:iam::240352458449:root",
+    "registeredAt": "2026-03-16T16:17:39.587Z",
+    "registeredBy": "arn:aws:iam::240352458449:user/arun",
     "enableFaultInjection": false,
     "tags": []
 }
